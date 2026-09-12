@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>王血條％數辨識與皮卡啾計時懸浮工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#111827',
+            surface: '#1f2937',
+            bordercol: '#374151',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      user-select: none;
+    }
+    /* 自訂捲軸樣式 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #111827;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4b5563;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+  <!-- 頂部導航列 -->
+  <header class="bg-panel border-b border-bordercol px-4 py-3 sticky top-0 z-40 shadow flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-sm">
+        %
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
+          楓星 王血條％數偵測懸浮工具
+          <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
+            網頁版 (免安裝)
+          </span>
+        </h1>
+        <p class="text-xs text-slate-400">純影像辨識・零記憶體入侵・置頂子母畫面・皮卡啾反盾循環計時</p>
+      </div>
+    </div>
+    <!-- 快捷操作列 -->
+    <div class="flex items-center gap-2">
+      <button id="btnTogglePip" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        <span>開啟置頂懸浮窗</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主工作區 (左側控制面板 + 右側遊戲畫面即時選取畫布) -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-5">
+    
+    <!-- 左側設定控制面板 (4 欄) -->
+    <div class="lg:col-span-4 space-y-4">
+      
+      <!-- 步驟 1：遊戲畫面擷取 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-4 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-xs flex items-center justify-center font-bold">1</span>
+          連接遊戲畫面
+        </h2>
+        <div class="space-y-2.5">
+          <button id="btnStartCapture" class="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span id="btnStartCaptureText">開始擷取遊戲畫面</span>
+          </button>
+          <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+            <span>視訊訊號：</span>
+            <span id="streamStatusBadge" class="px-2 py-0.5 rounded text-[11px] font-medium bg-rose-950/80 text-rose-400 border border-rose-800/60">尚未連接</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 2：血條範圍與顏色校正 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-4 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-xs flex items-center justify-center font-bold">2</span>
+          血條範圍與顏色校正
+        </h2>
+        <div class="space-y-3 text-xs">
+          <!-- 框選說明與坐標狀態 -->
+          <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">框選狀態：</span>
+              <span id="roiStatusLabel" class="text-amber-400 font-mono">尚未選取 (請在右側拖曳)</span>
+            </div>
+            <div id="roiCoordLabel" class="text-[11px] text-slate-500 font-mono truncate">
+              X: 0, Y: 0, W: 0, H: 0
+            </div>
+          </div>
+
+          <!-- 取色器按鈕與當前色彩 -->
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <div class="flex items-center gap-2">
+              <input type="color" id="colorPickerInput" value="#ab1000" class="w-7 h-7 rounded border border-slate-600 bg-transparent cursor-pointer" />
+              <div>
+                <div class="font-medium text-slate-300">目標血條顏色</div>
+                <div id="hexColorLabel" class="text-[10px] text-slate-400 font-mono uppercase">#AB1000</div>
+              </div>
+            </div>
+            <button id="btnEyedropper" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs transition flex items-center gap-1">
+              <span>🎯 點擊畫面吸色</span>
+            </button>
+          </div>
+
+          <!-- 色彩容許度滑桿 -->
+          <div>
+            <div class="flex justify-between items-center text-slate-400 mb-1">
+              <span>顏色容許度 (Tolerance)</span>
+              <span id="tolValLabel" class="font-mono text-indigo-400 font-bold">45</span>
+            </div>
+            <input type="range" id="toleranceSlider" min="10" max="110" value="45" class="w-full accent-indigo-500 cursor-pointer" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 3：Boss 預設與轉階預警設定 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-4 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-xs flex items-center justify-center font-bold">3</span>
+          Boss 預設與轉階提醒設定
+        </h2>
+        <div class="space-y-3 text-xs">
+          <!-- 快捷 Boss 選擇下拉選單 -->
+          <div>
+            <label class="block text-slate-400 mb-1">常用 Boss 預設選單：</label>
+            <div class="flex gap-1.5">
+              <select id="bossPresetSelect" class="flex-1 bg-slate-900 border border-bordercol rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                <option value="arkarium">阿卡伊農 (80/60/40/20 全圖殺)</option>
+                <option value="pinkbean">皮卡啾 (90 放魔消)</option>
+                <option value="custom">自訂配置 (Custom)</option>
+              </select>
+              <button id="btnApplyPreset" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition">
+                套用
+              </button>
+            </div>
+          </div>
+
+          <!-- 自訂警戒血量與提示詞文字框 -->
+          <div>
+            <label class="block text-slate-400 mb-1">轉階提示詞 (格式: 80:全圖殺, 60:全圖殺)：</label>
+            <input type="text" id="alertPhasesInput" value="80:全圖殺, 60:全圖殺, 40:全圖殺, 20:超級全圖殺" class="w-full bg-slate-900 border border-bordercol rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-[11px]" />
+          </div>
+
+          <!-- 提早預警設定 (即將跌破提醒) -->
+          <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-medium">即將跌破提前警戒 (預警區間)：</span>
+              <div class="flex items-center gap-1">
+                <input type="number" id="preAlertOffsetInput" min="0.5" max="10.0" step="0.5" value="2.5" class="w-14 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-center font-mono text-amber-400 font-bold focus:outline-none" />
+                <span class="text-slate-400">%</span>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400">
+              * 提示詞將在進入此區間時持續常駐顯示在置頂視窗，直到跌破為止。
+            </p>
+          </div>
+
+          <!-- 音效設定與試聽 -->
+          <div class="space-y-2 pt-1 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="chkAudioAlert" class="accent-indigo-500 rounded cursor-pointer" checked />
+                <span class="text-slate-300">啟用音效提醒</span>
+              </label>
+              <div class="flex items-center gap-1.5">
+                <select id="soundDurationSelect" class="bg-slate-900 border border-bordercol rounded px-2 py-0.5 text-[11px] text-slate-300">
+                  <option value="0.5">短音 (0.5s)</option>
+                  <option value="1.0" selected>標準長音 (1.0s)</option>
+                  <option value="1.8">三重奏長音 (1.8s)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <button id="btnTestPreAlert" class="w-full py-1.5 bg-amber-950/70 hover:bg-amber-900 text-amber-300 border border-amber-800/80 rounded text-[11px] font-medium transition flex items-center justify-center gap-1.5 shadow-sm">
+                <span>🔔 試聽「即將跌破」提醒音效</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 4：皮卡啾反盾循環計時器 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-purple-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 text-xs flex items-center justify-center font-bold">4</span>
+            🛡️ 皮卡啾反盾循環計時器
+          </h2>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" id="chkEnablePbTimer" class="accent-purple-500 rounded cursor-pointer" checked />
+            <span class="text-xs text-purple-300 font-medium">啟用計時器</span>
+          </label>
+        </div>
+
+        <!-- 計時器主控面板 (支援開關停用) -->
+        <div id="pbTimerControlsWrapper" class="space-y-2.5 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">當前狀態：</span>
+            <span id="pbTimerStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono">待命中</span>
+          </div>
+          <div class="p-2.5 bg-panel/90 rounded-lg border border-bordercol mb-2">
+            <div class="flex items-baseline justify-between">
+              <span id="pbTimerTitle" class="text-xs font-semibold text-slate-300">反盾倒數</span>
+              <span id="pbTimerBigDisplay" class="text-2xl font-black font-mono text-purple-400">READY</span>
+            </div>
+            <div class="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-700/80 mt-1.5">
+              <div id="pbTimerProgressBar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-100 ease-linear" style="width: 0%;"></div>
+            </div>
+          </div>
+          <!-- 手動計時操作按鈕 (無快捷鍵干擾) -->
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnPbPhase1" class="py-2.5 px-2 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-bold rounded-lg transition shadow flex items-center justify-center gap-1">
+              <span>1. 第一次反盾 (40s)</span>
+            </button>
+            <button id="btnPbPhase2" class="py-2.5 px-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-bold rounded-lg transition shadow flex items-center justify-center gap-1">
+              <span>2. 第二次結束 (15s)</span>
+            </button>
+          </div>
+          <div class="flex justify-end items-center text-[11px] text-slate-400 px-0.5">
+            <button id="btnPbReset" class="text-slate-400 hover:text-rose-400 transition underline cursor-pointer">重設計時</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 使用小撇步提示 -->
+      <div class="p-3 bg-indigo-950/30 border border-indigo-900/50 rounded-xl text-[11px] text-indigo-300 leading-relaxed">
+        💡 <b>操作小撇步：</b>
+        <ul class="list-disc list-inside mt-1 space-y-0.5 text-slate-400">
+          <li>請在右側預覽畫面按住滑鼠<b>左鍵拖曳</b>，精準框選整條王血條。</li>
+          <li>點擊「開啟置頂懸浮窗」後，小視窗會永遠浮在遊戲畫面上，可自由拖曳至角落。</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- 右側遊戲畫面預覽與框選區 (8 欄) -->
+    <div class="lg:col-span-8 flex flex-col gap-4">
+      
+      <!-- 頂部即時血量大儀表板 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto">
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">即時王血量</div>
+            <div id="mainHpValue" class="text-3xl md:text-4xl font-black font-mono text-emerald-400">100.0%</div>
+          </div>
+          <div class="flex-1 md:w-64">
+            <div class="flex justify-between text-xs mb-1 font-mono">
+              <span class="text-slate-400">血量進度條</span>
+              <span id="mainHpBarPercent" class="text-emerald-400 font-bold">100.0%</span>
+            </div>
+            <div class="h-3.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/80 p-0.5">
+              <div id="mainHpProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-100 ease-linear" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 即時橫幅警告顯示 -->
+        <div id="mainAlertBanner" class="w-full md:flex-1 py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/80 text-center text-xs font-bold text-slate-400 transition-all flex items-center justify-center min-h-[44px]">
+          待命中（尚未觸發轉階警示）
+        </div>
+      </div>
+
+      <!-- 畫面擷取畫布主容器 -->
+      <div class="bg-surface border border-bordercol rounded-xl p-3 flex-1 flex flex-col shadow-sm min-h-[440px]">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-bordercol text-xs text-slate-400">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            畫面預覽與框選標定畫布
+          </span>
+          <span id="canvasResolutionLabel" class="font-mono text-[11px] text-slate-500">解析度: 0 x 0</span>
+        </div>
+
+        <!-- 畫布展示容器 -->
+        <div id="canvasViewport" class="flex-1 w-full relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800/80 flex items-center justify-center cursor-crosshair select-none">
+          <canvas id="previewCanvas" class="block"></canvas>
+          
+          <!-- 未連線時的指引佔位介面 -->
+          <div id="streamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none bg-slate-950/80 backdrop-blur-sm">
+            <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mb-3">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <h3 class="text-sm font-bold text-slate-300 mb-1">尚未連接遊戲畫面</h3>
+            <p class="text-xs text-slate-500 max-w-sm">請點選左側「開始擷取遊戲畫面」，並於瀏覽器視窗選單中選擇你的遊戲應用程式。</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- 隱藏後台處理元素 -->
+  <video id="sourceVideo" class="absolute -top-[9999px] -left-[9999px] opacity-0 pointer-events-none w-1 h-1" playsinline muted autoplay></video>
+  <canvas id="pipRenderCanvas" width="320" height="96" class="hidden"></canvas>
+  <video id="pipVideoSink" class="hidden" playsinline muted autoplay></video>
+
+  <!-- 全域 Toast 訊息通知 -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    // 全域運行狀態
+    const state = {
+      stream: null,
+      videoWidth: 0,
+      videoHeight: 0,
+      isCapturing: false,
+      isEyedropperActive: false,
+      isDraggingRoi: false,
+      dragStart: { x: 0, y: 0 },
+      roi: null, // { x, y, width, height }
+      targetColor: { r: 171, g: 16, b: 0 }, // #AB1000
+      colorTolerance: 45,
+      currentHpPercent: 100.0,
+      pipWindow: null,
+      pipStream: null,
+      alertConfigs: [], // [{ threshold: 80, text: '全圖殺', triggered: false, preAlertTriggered: false }]
+      preAlertOffset: 2.5,
+      soundDuration: 1.0,
+      activeBanner: { text: '', type: 'idle', expiry: 0, persistent: false, targetPhase: null },
+      pbTimer: {
+        enabled: true,
+        active: false,
+        stage: 'idle',
+        label: '待命中',
+        totalDuration: 0,
+        endTime: 0,
+        lastAlertSec: -1,
+      },
+    };
+
+    // DOM 元素快取
+    const dom = {
+      sourceVideo: document.getElementById('sourceVideo'),
+      previewCanvas: document.getElementById('previewCanvas'),
+      canvasViewport: document.getElementById('canvasViewport'),
+      streamPlaceholder: document.getElementById('streamPlaceholder'),
+      btnStartCapture: document.getElementById('btnStartCapture'),
+      btnStartCaptureText: document.getElementById('btnStartCaptureText'),
+      streamStatusBadge: document.getElementById('streamStatusBadge'),
+      btnTogglePip: document.getElementById('btnTogglePip'),
+      roiStatusLabel: document.getElementById('roiStatusLabel'),
+      roiCoordLabel: document.getElementById('roiCoordLabel'),
+      colorPickerInput: document.getElementById('colorPickerInput'),
+      hexColorLabel: document.getElementById('hexColorLabel'),
+      btnEyedropper: document.getElementById('btnEyedropper'),
+      toleranceSlider: document.getElementById('toleranceSlider'),
+      tolValLabel: document.getElementById('tolValLabel'),
+      mainHpValue: document.getElementById('mainHpValue'),
+      mainHpBarPercent: document.getElementById('mainHpBarPercent'),
+      mainHpProgressBar: document.getElementById('mainHpProgressBar'),
+      mainAlertBanner: document.getElementById('mainAlertBanner'),
+      canvasResolutionLabel: document.getElementById('canvasResolutionLabel'),
+      alertPhasesInput: document.getElementById('alertPhasesInput'),
+      preAlertOffsetInput: document.getElementById('preAlertOffsetInput'),
+      chkAudioAlert: document.getElementById('chkAudioAlert'),
+      soundDurationSelect: document.getElementById('soundDurationSelect'),
+      btnTestPreAlert: document.getElementById('btnTestPreAlert'),
+      bossPresetSelect: document.getElementById('bossPresetSelect'),
+      btnApplyPreset: document.getElementById('btnApplyPreset'),
+      pipRenderCanvas: document.getElementById('pipRenderCanvas'),
+      pipVideoSink: document.getElementById('pipVideoSink'),
+      chkEnablePbTimer: document.getElementById('chkEnablePbTimer'),
+      pbTimerControlsWrapper: document.getElementById('pbTimerControlsWrapper'),
+      pbTimerStatusBadge: document.getElementById('pbTimerStatusBadge'),
+      pbTimerTitle: document.getElementById('pbTimerTitle'),
+      pbTimerBigDisplay: document.getElementById('pbTimerBigDisplay'),
+      pbTimerProgressBar: document.getElementById('pbTimerProgressBar'),
+      btnPbPhase1: document.getElementById('btnPbPhase1'),
+      btnPbPhase2: document.getElementById('btnPbPhase2'),
+      btnPbReset: document.getElementById('btnPbReset'),
+      toastContainer: document.getElementById('toastContainer'),
+    };
+
+    const ctx = dom.previewCanvas.getContext('2d');
+    const pipCtx = dom.pipRenderCanvas.getContext('2d');
+
+    // Boss 預設資料庫
+    const BOSS_PRESETS = {
+      arkarium: {
+        name: '阿卡伊農',
+        phases: '80:全圖殺, 60:全圖殺, 40:全圖殺, 20:超級全圖殺',
+      },
+      pinkbean: {
+        name: '皮卡啾',
+        phases: '90:放魔消',
+      },
+      general: {
+        name: '通用預設',
+        phases: '50:轉二階注意無敵, 30:準備開爆發, 10:鎖血斬殺',
+      }
+    };
+
+    // 吐司通知訊息
+    function showToast(msg, type = 'info') {
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-600' : type === 'warn' ? 'bg-amber-600' : type === 'danger' ? 'bg-rose-600' : 'bg-slate-800 border border-slate-700';
+      toast.className = `${bg} text-white text-xs px-3.5 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all transform duration-200 translate-y-2 opacity-0 pointer-events-auto`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      dom.toastContainer.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 250);
+      }, 3000);
+    }
+
+    // 跌破警報音效
+    function playBeep(durationMulti = 1.0) {
+      if (!dom.chkAudioAlert.checked) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const actx = new AudioCtx();
+        const baseDuration = (state.soundDuration || 1.0) * durationMulti;
+        const now = actx.currentTime;
+
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+
+        if (baseDuration <= 0.6) {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(440, now + baseDuration);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + baseDuration);
+          osc.connect(gain);
+          gain.connect(actx.destination);
+          osc.start(now);
+          osc.stop(now + baseDuration);
+        } else if (baseDuration <= 1.2) {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(783.99, now); // G5
+          osc.frequency.setValueAtTime(1046.50, now + baseDuration * 0.4); // C6
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.setValueAtTime(0.4, now + baseDuration * 0.4);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + baseDuration);
+          osc.connect(gain);
+          gain.connect(actx.destination);
+          osc.start(now);
+          osc.stop(now + baseDuration);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(659.25, now); // E5
+          osc.frequency.setValueAtTime(880.00, now + baseDuration * 0.33); // A5
+          osc.frequency.setValueAtTime(1174.66, now + baseDuration * 0.66); // D6
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + baseDuration);
+          osc.connect(gain);
+          gain.connect(actx.destination);
+          osc.start(now);
+          osc.stop(now + baseDuration);
+        }
+      } catch (e) {
+        console.warn('音效播放失敗:', e);
+      }
+    }
+
+    // 皮卡啾倒數計時最後 3 秒微型嗶聲
+    function playTickBeep() {
+      if (!dom.chkAudioAlert.checked) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const actx = new AudioCtx();
+        const now = actx.currentTime;
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(820, now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } catch (e) {}
+    }
+
+    // 啟動皮卡啾計時器
+    function startPbTimer(durationSec, stageKey, label) {
+      if (!state.pbTimer.enabled) {
+        showToast('請先勾選上方「啟用計時器」', 'warn');
+        return;
+      }
+      state.pbTimer.active = true;
+      state.pbTimer.stage = stageKey;
+      state.pbTimer.label = label;
+      state.pbTimer.totalDuration = durationSec;
+      state.pbTimer.endTime = performance.now() + durationSec * 1000;
+      state.pbTimer.lastAlertSec = -1;
+      showToast(`皮卡啾計時啟動：${label}`, 'info');
+      updatePbTimerDisplay();
+    }
+
+    // 重設皮卡啾計時器
+    function resetPbTimer() {
+      state.pbTimer.active = false;
+      state.pbTimer.stage = 'idle';
+      state.pbTimer.label = '待命中';
+      state.pbTimer.totalDuration = 0;
+      state.pbTimer.endTime = 0;
+      state.pbTimer.lastAlertSec = -1;
+      updatePbTimerDisplay();
+      showToast('皮卡啾計時已重設', 'info');
+    }
+
+    // 更新皮卡啾計時器介面顯示 (主畫面與置頂小視窗)
+    function updatePbTimerDisplay() {
+      if (!dom.pbTimerBigDisplay) return;
+
+      if (!state.pbTimer.enabled) {
+        dom.pbTimerControlsWrapper.classList.add('opacity-40', 'pointer-events-none');
+        dom.pbTimerBigDisplay.textContent = 'OFF';
+        dom.pbTimerBigDisplay.className = 'text-2xl font-black font-mono text-slate-500';
+        dom.pbTimerProgressBar.style.width = '0%';
+        dom.pbTimerStatusBadge.textContent = '已停用';
+        dom.pbTimerStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono';
+        dom.pbTimerTitle.textContent = '反盾計時已關閉';
+        return;
+      } else {
+        dom.pbTimerControlsWrapper.classList.remove('opacity-40', 'pointer-events-none');
+      }
+
+      if (!state.pbTimer.active) {
+        dom.pbTimerBigDisplay.textContent = 'READY';
+        dom.pbTimerBigDisplay.className = 'text-2xl font-black font-mono text-purple-400';
+        dom.pbTimerProgressBar.style.width = '0%';
+        dom.pbTimerStatusBadge.textContent = '待命中';
+        dom.pbTimerStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono';
+        dom.pbTimerTitle.textContent = '反盾倒數';
+        return;
+      }
+
+      const now = performance.now();
+      const remSec = Math.max(0, (state.pbTimer.endTime - now) / 1000);
+      const remFloor = Math.ceil(remSec);
+
+      // 最後 3 秒嘀聲預警
+      if (remFloor <= 3 && remFloor > 0 && state.pbTimer.lastAlertSec !== remFloor) {
+        state.pbTimer.lastAlertSec = remFloor;
+        playTickBeep();
+      }
+
+      const pct = (remSec / state.pbTimer.totalDuration) * 100;
+      dom.pbTimerProgressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      dom.pbTimerBigDisplay.textContent = `${remSec.toFixed(1)}s`;
+      dom.pbTimerTitle.textContent = state.pbTimer.label;
+
+      if (remSec <= 0) {
+        state.pbTimer.active = false;
+        dom.pbTimerBigDisplay.textContent = '⚠️ 施放反盾！';
+        dom.pbTimerBigDisplay.className = 'text-xl font-black font-mono text-rose-500 animate-pulse';
+        playBeep(1.5);
+        setAlertBanner('🚨 皮卡啾即將施放反盾！立刻停手！', 'danger', 4500, false);
+        showToast('⚠️ 皮卡啾即將施放反盾！立刻停手！', 'danger');
+      } else if (remSec <= 5) {
+        dom.pbTimerBigDisplay.className = 'text-2xl font-black font-mono text-rose-400 animate-pulse';
+        dom.pbTimerStatusBadge.textContent = '即將施放！';
+        dom.pbTimerStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono font-bold';
+      } else {
+        dom.pbTimerBigDisplay.className = 'text-2xl font-black font-mono text-purple-400';
+        dom.pbTimerStatusBadge.textContent = '倒數中';
+        dom.pbTimerStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono';
+      }
+
+      // 同步更新置頂小視窗 Document PiP
+      if (state.pipWindow && !state.pipWindow.closed) {
+        const pipTimerSection = state.pipWindow.document.getElementById('pipPbTimerSection');
+        if (pipTimerSection) {
+          pipTimerSection.style.display = state.pbTimer.enabled ? 'block' : 'none';
+        }
+        const pipTimerVal = state.pipWindow.document.getElementById('pipTimerVal');
+        const pipTimerBar = state.pipWindow.document.getElementById('pipTimerBar');
+        const pipTimerLabel = state.pipWindow.document.getElementById('pipTimerLabel');
+        if (pipTimerVal) {
+          pipTimerVal.textContent = state.pbTimer.active ? `${remSec.toFixed(1)}s` : 'READY';
+          pipTimerVal.style.color = remSec <= 5 ? '#f43f5e' : '#c084fc';
+        }
+        if (pipTimerBar) {
+          pipTimerBar.style.width = state.pbTimer.active ? `${pct}%` : '0%';
+          pipTimerBar.style.backgroundColor = remSec <= 5 ? '#f43f5e' : '#a855f7';
+        }
+        if (pipTimerLabel) {
+          pipTimerLabel.textContent = state.pbTimer.active ? state.pbTimer.label : '🛡️ 皮卡啾反盾倒數';
+        }
+      }
+    }
+
+    // 獨立計時器心跳循環 (不論是否在螢幕串流中皆可順暢倒數)
+    setInterval(() => {
+      if (state.pbTimer && state.pbTimer.enabled && state.pbTimer.active) {
+        updatePbTimerDisplay();
+      }
+    }, 100);
+
+    // 設定警戒橫幅文字與常駐邏輯
+    function setAlertBanner(text, type, durationMs = 4000, persistent = false, targetPhase = null) {
+      state.activeBanner = {
+        text,
+        type,
+        expiry: performance.now() + durationMs,
+        persistent,
+        targetPhase,
+      };
+
+      dom.mainAlertBanner.textContent = text;
+      if (type === 'danger') {
+        dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-rose-500 bg-rose-950/80 text-center text-xs font-bold text-rose-200 animate-pulse min-h-[44px] flex items-center justify-center';
+      } else if (type === 'warn') {
+        dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-amber-500 bg-amber-950/80 text-center text-xs font-bold text-amber-200 min-h-[44px] flex items-center justify-center';
+      } else {
+        dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/80 text-center text-xs font-bold text-slate-400 min-h-[44px] flex items-center justify-center';
+      }
+
+      if (state.pipWindow && !state.pipWindow.closed) {
+        const pipBanner = state.pipWindow.document.getElementById('pipAlertBanner');
+        if (pipBanner) {
+          pipBanner.style.display = 'block';
+          pipBanner.textContent = text;
+          if (type === 'danger') {
+            pipBanner.style.backgroundColor = '#881337';
+            pipBanner.style.borderColor = '#f43f5e';
+            pipBanner.style.color = '#ffe4e6';
+          } else {
+            pipBanner.style.backgroundColor = '#78350f';
+            pipBanner.style.borderColor = '#f59e0b';
+            pipBanner.style.color = '#fef3c7';
+          }
+        }
+      }
+    }
+
+    // 解析自訂警戒配置
+    function parseAlertConfigs(str) {
+      if (!str || !str.trim()) return [];
+      const parts = str.split(/[,，]/);
+      const list = [];
+      for (const p of parts) {
+        const pair = p.trim();
+        if (!pair) continue;
+        const [valStr, customTxt] = pair.split(/[:：]/);
+        const val = parseFloat(valStr);
+        if (!isNaN(val) && val >= 0 && val <= 100) {
+          list.push({
+            threshold: val,
+            text: customTxt ? customTxt.trim() : `血量低於 ${val}%`,
+            triggered: false,
+            preAlertTriggered: false,
+          });
+        }
+      }
+      return list.sort((a, b) => b.threshold - a.threshold);
+    }
+
+    // 檢查轉階警戒與常駐預警
+    function checkPhaseAlerts(hp) {
+      const preOffset = parseFloat(dom.preAlertOffsetInput.value) || 2.5;
+
+      state.alertConfigs.forEach(item => {
+        const preThreshold = item.threshold + preOffset;
+
+        // 1. 進入「即將跌破」預警區間：播放音效並常駐顯示提示詞
+        if (hp <= preThreshold && hp > item.threshold) {
+          if (!item.preAlertTriggered && !item.triggered) {
+            item.preAlertTriggered = true;
+            playBeep();
+            showToast(`⚠️ 即將跌破 ${item.threshold}% (${item.text})`, 'warn');
+            setAlertBanner(`⚠️ 即將跌破 ${item.threshold}% (${item.text})`, 'warn', 0, true, item.threshold);
+          }
+        }
+
+        // 2. 真正跌破門檻時：標記已觸發，自動收回預警橫幅，不發出任何音效
+        if (hp <= item.threshold) {
+          if (!item.triggered) {
+            item.triggered = true;
+            // 若目前橫幅為該階段的預警橫幅，跌破時即自然清除
+            if (state.activeBanner.persistent && state.activeBanner.targetPhase === item.threshold) {
+              state.activeBanner = { text: '', type: 'idle', expiry: 0, persistent: false, targetPhase: null };
+              dom.mainAlertBanner.textContent = '待命中（尚未觸發轉階警示）';
+              dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/80 text-center text-xs font-bold text-slate-400 min-h-[44px] flex items-center justify-center';
+              if (state.pipWindow && !state.pipWindow.closed) {
+                const pipBanner = state.pipWindow.document.getElementById('pipAlertBanner');
+                if (pipBanner) pipBanner.style.display = 'none';
+              }
+            }
+          }
+        }
+
+        // 3. 血量回升重設（防止判定抖動）
+        if (hp > preThreshold + 1.0) {
+          item.triggered = false;
+          item.preAlertTriggered = false;
+          if (state.activeBanner.persistent && state.activeBanner.targetPhase === item.threshold) {
+            state.activeBanner = { text: '', type: 'idle', expiry: 0, persistent: false, targetPhase: null };
+            dom.mainAlertBanner.textContent = '待命中（已離開預警區間）';
+            dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/80 text-center text-xs font-bold text-slate-400 min-h-[44px] flex items-center justify-center';
+            if (state.pipWindow && !state.pipWindow.closed) {
+              const pipBanner = state.pipWindow.document.getElementById('pipAlertBanner');
+              if (pipBanner) pipBanner.style.display = 'none';
+            }
+          }
+        }
+      });
+
+      // 清除逾期之非常駐橫幅
+      if (!state.activeBanner.persistent && performance.now() > state.activeBanner.expiry) {
+        if (state.activeBanner.type !== 'idle') {
+          state.activeBanner.type = 'idle';
+          dom.mainAlertBanner.textContent = '待命中（尚未觸發轉階警示）';
+          dom.mainAlertBanner.className = 'w-full md:flex-1 py-2 px-3 rounded-lg border border-slate-800 bg-slate-900/80 text-center text-xs font-bold text-slate-400 min-h-[44px] flex items-center justify-center';
+          if (state.pipWindow && !state.pipWindow.closed) {
+            const pipBanner = state.pipWindow.document.getElementById('pipAlertBanner');
+            if (pipBanner) pipBanner.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    // 橫向像素取樣計算血量百分比
+    function analyzeHpFromRoi() {
+      if (!state.roi || state.roi.width <= 2 || state.roi.height <= 2) return 100.0;
+
+      const rx = Math.round(state.roi.x);
+      const ry = Math.round(state.roi.y);
+      const rw = Math.round(state.roi.width);
+      const rh = Math.round(state.roi.height);
+
+      if (rx < 0 || ry < 0 || rx + rw > state.videoWidth || ry + rh > state.videoHeight) {
+        return 100.0;
+      }
+
+      try {
+        const imgData = ctx.getImageData(rx, ry, rw, rh);
+        const data = imgData.data;
+        const tr = state.targetColor.r;
+        const tg = state.targetColor.g;
+        const tb = state.targetColor.b;
+        const tolSq = state.colorTolerance * state.colorTolerance;
+
+        // 取上、中、下三條垂直抽樣線
+        const midY = Math.floor(rh / 2);
+        const sampleRows = [midY];
+        if (rh >= 5) {
+          sampleRows.push(Math.floor(rh * 0.25), Math.floor(rh * 0.75));
+        }
+
+        let matchedCols = 0;
+        for (let col = 0; col < rw; col++) {
+          let hasMatch = false;
+          for (const row of sampleRows) {
+            const idx = (row * rw + col) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const distSq = (r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2;
+            if (distSq <= tolSq) {
+              hasMatch = true;
+              break;
+            }
+          }
+          if (hasMatch) matchedCols++;
+        }
+
+        return (matchedCols / rw) * 100.0;
+      } catch (e) {
+        return 100.0;
+      }
+    }
+
+    // 繪製畫布輔助框與吸管取色游標
+    function drawOverlayElements() {
+      // 繪製框選之 ROI
+      if (state.roi && state.roi.width > 0 && state.roi.height > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+        ctx.strokeRect(state.roi.x, state.roi.y, state.roi.width, state.roi.height);
+        ctx.fillRect(state.roi.x, state.roi.y, state.roi.width, state.roi.height);
+
+        // 四個角落控制點
+        ctx.fillStyle = '#0284c7';
+        const corners = [
+          [state.roi.x, state.roi.y],
+          [state.roi.x + state.roi.width, state.roi.y],
+          [state.roi.x, state.roi.y + state.roi.height],
+          [state.roi.x + state.roi.width, state.roi.y + state.roi.height],
+        ];
+        corners.forEach(([cx, cy]) => {
+          ctx.fillRect(cx - 3, cy - 3, 6, 6);
+        });
+
+        // 標註長寬文字
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#e0f2fe';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(`血條區: ${Math.round(state.roi.width)}x${Math.round(state.roi.height)}`, state.roi.x, Math.max(16, state.roi.y - 6));
+        ctx.restore();
+      }
+    }
+
+    // 繪製原生視訊 PiP 備用畫布
+    function renderToPipCanvas(hpPct) {
+      const w = dom.pipRenderCanvas.width;
+      const h = dom.pipRenderCanvas.height;
+      const isBannerActive = state.activeBanner.persistent || (performance.now() < state.activeBanner.expiry);
+
+      pipCtx.fillStyle = isBannerActive
+        ? (state.activeBanner.type === 'danger' ? '#1c0a0e' : '#1a1405')
+        : '#0b0f19';
+      pipCtx.fillRect(0, 0, w, h);
+
+      pipCtx.fillStyle = '#94a3b8';
+      pipCtx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      pipCtx.fillText('BOSS HP', 12, 18);
+
+      const text = `${hpPct.toFixed(1)}%`;
+      pipCtx.font = '900 18px ui-monospace, SFMono-Regular, monospace';
+      pipCtx.fillStyle = hpPct > 50 ? '#34d399' : hpPct > 20 ? '#fbbf24' : '#f43f5e';
+      const textWidth = pipCtx.measureText(text).width;
+      pipCtx.fillText(text, w - textWidth - 12, 19);
+
+      // 血條本體
+      const barY = 25;
+      const barH = 10;
+      const barPadding = 12;
+      const barW = w - barPadding * 2;
+
+      pipCtx.fillStyle = '#1e293b';
+      pipCtx.beginPath();
+      pipCtx.roundRect(barPadding, barY, barW, barH, 3);
+      pipCtx.fill();
+
+      const fillW = Math.max(0, (hpPct / 100) * barW);
+      pipCtx.fillStyle = hpPct > 50 ? '#10b981' : hpPct > 20 ? '#f59e0b' : '#e11d48';
+      pipCtx.beginPath();
+      pipCtx.roundRect(barPadding, barY, fillW, barH, 3);
+      pipCtx.fill();
+
+      // 皮卡啾微型計時條 (僅在啟用時繪製)
+      if (state.pbTimer && state.pbTimer.enabled) {
+        const timerY = 40;
+        pipCtx.font = 'bold 10px -apple-system, sans-serif';
+        pipCtx.fillStyle = '#c084fc';
+        const remSec = state.pbTimer.active ? Math.max(0, (state.pbTimer.endTime - performance.now()) / 1000) : 0;
+        const timerLabel = state.pbTimer.active
+          ? `${state.pbTimer.stage === 'phase1' ? 'PB 1階40s' : 'PB 結束15s'}: ${remSec.toFixed(1)}s`
+          : 'PB計時待機';
+        pipCtx.fillText(timerLabel, 12, timerY + 8);
+
+        const pbBarY = timerY + 12;
+        pipCtx.fillStyle = '#1e293b';
+        pipCtx.beginPath();
+        pipCtx.roundRect(barPadding, pbBarY, barW, 6, 2);
+        pipCtx.fill();
+
+        if (state.pbTimer.active && state.pbTimer.totalDuration > 0) {
+          const pbPct = (remSec / state.pbTimer.totalDuration);
+          pipCtx.fillStyle = remSec <= 5 ? '#f43f5e' : remSec <= 10 ? '#fbbf24' : '#a855f7';
+          pipCtx.beginPath();
+          pipCtx.roundRect(barPadding, pbBarY, Math.max(0, pbPct * barW), 6, 2);
+          pipCtx.fill();
+        }
+      }
+
+      // 警報橫幅文字
+      if (isBannerActive && state.activeBanner.text) {
+        const bannerH = 22;
+        const bannerY = 64;
+        pipCtx.fillStyle = state.activeBanner.type === 'danger' ? 'rgba(225, 29, 72, 0.95)' : 'rgba(217, 119, 6, 0.95)';
+        pipCtx.beginPath();
+        pipCtx.roundRect(barPadding, bannerY, barW, bannerH, 4);
+        pipCtx.fill();
+
+        pipCtx.fillStyle = '#ffffff';
+        pipCtx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+        const bannerText = state.activeBanner.text;
+        const bTextWidth = pipCtx.measureText(bannerText).width;
+        const textX = Math.max(barPadding + 4, barPadding + (barW - bTextWidth) / 2);
+        pipCtx.fillText(bannerText, textX, bannerY + 15);
+      }
+    }
+
+    // 主畫面逐幀分析迴圈
+    function processFrameLoop() {
+      if (!state.isCapturing) return;
+
+      if (dom.sourceVideo.readyState >= 2) {
+        ctx.drawImage(dom.sourceVideo, 0, 0, state.videoWidth, state.videoHeight);
+
+        // 分析血量
+        const hp = analyzeHpFromRoi();
+        state.currentHpPercent = hp;
+
+        // 更新主儀表介面
+        dom.mainHpValue.textContent = `${hp.toFixed(1)}%`;
+        dom.mainHpBarPercent.textContent = `${hp.toFixed(1)}%`;
+        dom.mainHpProgressBar.style.width = `${hp}%`;
+
+        if (hp > 50) {
+          dom.mainHpValue.className = 'text-3xl md:text-4xl font-black font-mono text-emerald-400';
+          dom.mainHpProgressBar.className = 'h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-100 ease-linear';
+        } else if (hp > 20) {
+          dom.mainHpValue.className = 'text-3xl md:text-4xl font-black font-mono text-amber-400';
+          dom.mainHpProgressBar.className = 'h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-100 ease-linear';
+        } else {
+          dom.mainHpValue.className = 'text-3xl md:text-4xl font-black font-mono text-rose-500';
+          dom.mainHpProgressBar.className = 'h-full bg-gradient-to-r from-rose-600 to-red-500 rounded-full transition-all duration-100 ease-linear';
+        }
+
+        // 檢查轉階警戒
+        checkPhaseAlerts(hp);
+
+        // 更新懸浮置頂窗 (Document PiP)
+        if (state.pipWindow && !state.pipWindow.closed) {
+          const pipHpVal = state.pipWindow.document.getElementById('pipHpVal');
+          const pipHpBar = state.pipWindow.document.getElementById('pipHpBar');
+          if (pipHpVal && pipHpBar) {
+            pipHpVal.textContent = `${hp.toFixed(1)}%`;
+            pipHpBar.style.width = `${hp}%`;
+            if (hp > 50) {
+              pipHpVal.style.color = '#34d399';
+              pipHpBar.style.backgroundColor = '#10b981';
+            } else if (hp > 20) {
+              pipHpVal.style.color = '#fbbf24';
+              pipHpBar.style.backgroundColor = '#f59e0b';
+            } else {
+              pipHpVal.style.color = '#f43f5e';
+              pipHpBar.style.backgroundColor = '#e11d48';
+            }
+          }
+        }
+
+        // 繪製輔助線框
+        drawOverlayElements();
+
+        // 繪製原生 PiP Canvas
+        renderToPipCanvas(hp);
+      }
+
+      requestAnimationFrame(processFrameLoop);
+    }
+
+    // 精準座標換算與邊界夾取 (Pixel-Perfect Alignment)
+    function getCanvasCoordinates(e) {
+      const rect = dom.previewCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const scaleX = state.videoWidth / rect.width;
+      const scaleY = state.videoHeight / rect.height;
+
+      const px = (clientX - rect.left) * scaleX;
+      const py = (clientY - rect.top) * scaleY;
+
+      return {
+        x: Math.max(0, Math.min(state.videoWidth, px)),
+        y: Math.max(0, Math.min(state.videoHeight, py)),
+      };
+    }
+
+    // 畫布自適應容器尺寸計算
+    function resizeCanvasDisplay() {
+      if (!state.videoWidth || !state.videoHeight) return;
+      const containerW = dom.canvasViewport.clientWidth;
+      const containerH = dom.canvasViewport.clientHeight;
+      const videoRatio = state.videoWidth / state.videoHeight;
+      const containerRatio = containerW / containerH;
+
+      let displayW, displayH;
+      if (videoRatio > containerRatio) {
+        displayW = containerW;
+        displayH = containerW / videoRatio;
+      } else {
+        displayH = containerH;
+        displayW = containerH * videoRatio;
+      }
+
+      dom.previewCanvas.style.width = `${Math.floor(displayW)}px`;
+      dom.previewCanvas.style.height = `${Math.floor(displayH)}px`;
+    }
+
+    window.addEventListener('resize', resizeCanvasDisplay);
+
+    // 滑鼠與觸控事件監聽 (框選 ROI 與吸管取色)
+    dom.previewCanvas.addEventListener('mousedown', (e) => {
+      if (!state.isCapturing) return;
+      const pt = getCanvasCoordinates(e);
+
+      // 吸管取色模式
+      if (state.isEyedropperActive) {
+        const pixel = ctx.getImageData(Math.floor(pt.x), Math.floor(pt.y), 1, 1).data;
+        state.targetColor = { r: pixel[0], g: pixel[1], b: pixel[2] };
+        const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(x => x.toString(16).padStart(2, '0')).join('');
+        dom.colorPickerInput.value = hex;
+        dom.hexColorLabel.textContent = hex;
+        state.isEyedropperActive = false;
+        dom.btnEyedropper.classList.remove('bg-indigo-600', 'text-white');
+        dom.btnEyedropper.classList.add('bg-slate-700', 'text-slate-200');
+        showToast(`已吸取血條代表色：${hex}`, 'success');
+        return;
+      }
+
+      // 框選 ROI
+      state.isDraggingRoi = true;
+      state.dragStart = { x: pt.x, y: pt.y };
+      state.roi = { x: pt.x, y: pt.y, width: 0, height: 0 };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!state.isDraggingRoi) return;
+      const pt = getCanvasCoordinates(e);
+
+      const x = Math.min(state.dragStart.x, pt.x);
+      const y = Math.min(state.dragStart.y, pt.y);
+      const w = Math.abs(pt.x - state.dragStart.x);
+      const h = Math.abs(pt.y - state.dragStart.y);
+
+      state.roi = { x, y, width: w, height: h };
+      dom.roiCoordLabel.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}, W: ${Math.round(w)}, H: ${Math.round(h)}`;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!state.isDraggingRoi) return;
+      state.isDraggingRoi = false;
+
+      if (state.roi && (state.roi.width < 10 || state.roi.height < 3)) {
+        state.roi = null;
+        dom.roiStatusLabel.textContent = '框選範圍過小，請重新框選';
+        dom.roiStatusLabel.className = 'text-rose-400 font-mono';
+      } else if (state.roi) {
+        dom.roiStatusLabel.textContent = '已設定血條範圍';
+        dom.roiStatusLabel.className = 'text-emerald-400 font-mono font-bold';
+        showToast('血條範圍設定成功！', 'success');
+      }
+    });
+
+    // 啟動螢幕擷取
+    async function startScreenCapture() {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always',
+            frameRate: { ideal: 30, max: 60 },
+          },
+          audio: false,
+        });
+
+        state.stream = stream;
+        dom.sourceVideo.srcObject = stream;
+        await dom.sourceVideo.play();
+
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        state.videoWidth = settings.width || 1920;
+        state.videoHeight = settings.height || 1080;
+
+        dom.previewCanvas.width = state.videoWidth;
+        dom.previewCanvas.height = state.videoHeight;
+        dom.canvasResolutionLabel.textContent = `解析度: ${state.videoWidth} x ${state.videoHeight}`;
+
+        resizeCanvasDisplay();
+
+        state.isCapturing = true;
+        dom.streamPlaceholder.classList.add('hidden');
+        dom.streamStatusBadge.textContent = '正常連線中';
+        dom.streamStatusBadge.className = 'px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/60';
+        dom.btnStartCapture.className = 'w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow';
+        dom.btnStartCaptureText.textContent = '停止畫面擷取';
+
+        track.onended = () => {
+          stopScreenCapture();
+        };
+
+        requestAnimationFrame(processFrameLoop);
+        showToast('已成功連接遊戲畫面！請用滑鼠框選血條', 'success');
+      } catch (err) {
+        console.error('螢幕擷取失敗:', err);
+        showToast('畫面擷取失敗或使用者已取消', 'warn');
+      }
+    }
+
+    // 停止畫面擷取
+    function stopScreenCapture() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(t => t.stop());
+        state.stream = null;
+      }
+      state.isCapturing = false;
+      dom.sourceVideo.srcObject = null;
+      dom.streamPlaceholder.classList.remove('hidden');
+      dom.streamStatusBadge.textContent = '尚未連接';
+      dom.streamStatusBadge.className = 'px-2 py-0.5 rounded text-[11px] font-medium bg-rose-950/80 text-rose-400 border border-rose-800/60';
+      dom.btnStartCapture.className = 'w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow';
+      dom.btnStartCaptureText.textContent = '開始擷取遊戲畫面';
+    }
+
+    // 啟動置頂懸浮視窗 (Chrome Document PiP / 原生視訊 PiP)
+    async function toggleFloatingOverlay() {
+      if ('documentPictureInPicture' in window) {
+        if (state.pipWindow) {
+          state.pipWindow.close();
+          state.pipWindow = null;
+          return;
+        }
+
+        try {
+          const winHeight = state.pbTimer.enabled ? 195 : 110;
+          state.pipWindow = await window.documentPictureInPicture.requestWindow({
+            width: 310,
+            height: winHeight,
+          });
+
+          const pipDoc = state.pipWindow.document;
+          pipDoc.title = 'Boss HP 監控懸浮窗';
+          pipDoc.body.style.margin = '0';
+          pipDoc.body.style.padding = '8px 12px';
+          pipDoc.body.style.backgroundColor = '#0b0f19';
+          pipDoc.body.style.color = '#f8fafc';
+          pipDoc.body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+          pipDoc.body.style.userSelect = 'none';
+          pipDoc.body.style.boxSizing = 'border-box';
+          pipDoc.body.style.display = 'flex';
+          pipDoc.body.style.flexDirection = 'column';
+          pipDoc.body.style.justifyContent = 'space-between';
+          pipDoc.body.style.height = '100%';
+
+          pipDoc.body.innerHTML = `
+            <!-- 血量部分 -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;">
+                <span style="font-size:10px; font-weight:800; color:#94a3b8; letter-spacing:0.5px;">BOSS HP</span>
+                <span id="pipHpVal" style="font-size:20px; font-weight:900; font-family:monospace; color:#10b981;">${state.currentHpPercent.toFixed(1)}%</span>
+              </div>
+              <div style="height:10px; background:#1e293b; border-radius:4px; overflow:hidden; border:1px solid #334155;">
+                <div id="pipHpBar" style="height:100%; width:${state.currentHpPercent}%; background:#10b981; transition:width 0.1s ease-out;"></div>
+              </div>
+            </div>
+
+            <!-- 皮卡啾反盾計時器區域 (可依開關顯示/隱藏) -->
+            <div id="pipPbTimerSection" style="display:${state.pbTimer.enabled ? 'block' : 'none'}; background:#131528; border:1px solid #3b2d54; border-radius:6px; padding:6px 8px; margin-top:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span id="pipTimerLabel" style="font-size:10px; font-weight:bold; color:#c084fc;">🛡️ 皮卡啾反盾倒數</span>
+                <span id="pipTimerVal" style="font-size:14px; font-weight:900; font-family:monospace; color:#c084fc;">READY</span>
+              </div>
+              <div style="height:6px; background:#1e293b; border-radius:3px; overflow:hidden; margin-bottom:6px;">
+                <div id="pipTimerBar" style="height:100%; width:0%; background:#a855f7; transition:width 0.1s linear;"></div>
+              </div>
+              <!-- 懸浮窗內的快捷點擊按鈕 -->
+              <div style="display:flex; gap:4px;">
+                <button id="pipBtnP1" style="flex:1; background:#4c1d95; color:#f3e8ff; border:none; border-radius:4px; padding:4px 0; font-size:10px; font-weight:bold; cursor:pointer;">1. 反盾始(40s)</button>
+                <button id="pipBtnP2" style="flex:1; background:#78350f; color:#fef3c7; border:none; border-radius:4px; padding:4px 0; font-size:10px; font-weight:bold; cursor:pointer;">2. 結束後(15s)</button>
+                <button id="pipBtnReset" style="width:34px; background:#334155; color:#cbd5e1; border:none; border-radius:4px; padding:4px 0; font-size:10px; cursor:pointer;">重設</button>
+              </div>
+            </div>
+
+            <!-- 警報提示詞橫幅 -->
+            <div id="pipAlertBanner" style="display:none; font-size:10px; font-weight:bold; padding:3px 6px; border-radius:4px; text-align:center; border:1px solid; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            </div>
+          `;
+
+          // 綁定置頂小窗上的按鈕點擊事件
+          pipDoc.getElementById('pipBtnP1').addEventListener('click', () => {
+            startPbTimer(40, 'phase1', '第一次反盾 (40秒)');
+          });
+          pipDoc.getElementById('pipBtnP2').addEventListener('click', () => {
+            startPbTimer(15, 'phase2_end', '第二次反盾結束 (15秒)');
+          });
+          pipDoc.getElementById('pipBtnReset').addEventListener('click', resetPbTimer);
+
+          state.pipWindow.addEventListener('pagehide', () => {
+            state.pipWindow = null;
+            showToast('置頂視窗已關閉', 'info');
+          });
+
+          showToast('已開啟置頂懸浮窗！', 'success');
+          return;
+        } catch (err) {
+          console.warn('Document PiP 啟動失敗，切換至原生視訊 PiP:', err);
+        }
+      }
+
+      // 備案：原生視訊 Picture-in-Picture
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await dom.pipVideoSink.play();
+          await dom.pipVideoSink.requestPictureInPicture();
+          showToast('已開啟視訊子母畫面懸浮窗', 'success');
+        }
+      } catch (err) {
+        showToast('無法開啟子母畫面: ' + err.message, 'danger');
+      }
+    }
+
+    // 初始化原生視訊 PiP 串流
+    function setupPipStream() {
+      try {
+        if (dom.pipRenderCanvas.captureStream) {
+          state.pipStream = dom.pipRenderCanvas.captureStream(30);
+          dom.pipVideoSink.srcObject = state.pipStream;
+        }
+      } catch (e) {}
+    }
+
+    // 綁定事件監聽器
+    dom.btnStartCapture.addEventListener('click', () => {
+      if (state.isCapturing) {
+        stopScreenCapture();
+      } else {
+        startScreenCapture();
+      }
+    });
+
+    dom.btnTogglePip.addEventListener('click', toggleFloatingOverlay);
+
+    // 吸管取色模式
+    dom.btnEyedropper.addEventListener('click', () => {
+      if (!state.isCapturing) {
+        showToast('請先連接畫面後再吸色', 'warn');
+        return;
+      }
+      state.isEyedropperActive = !state.isEyedropperActive;
+      if (state.isEyedropperActive) {
+        dom.btnEyedropper.classList.add('bg-indigo-600', 'text-white');
+        dom.btnEyedropper.classList.remove('bg-slate-700', 'text-slate-200');
+        showToast('請在右側預覽畫面中點擊血條顏色', 'info');
+      } else {
+        dom.btnEyedropper.classList.remove('bg-indigo-600', 'text-white');
+        dom.btnEyedropper.classList.add('bg-slate-700', 'text-slate-200');
+      }
+    });
+
+    // 顏色選擇器變更
+    dom.colorPickerInput.addEventListener('input', (e) => {
+      const hex = e.target.value;
+      dom.hexColorLabel.textContent = hex;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      state.targetColor = { r, g, b };
+    });
+
+    // 容許度滑桿變更
+    dom.toleranceSlider.addEventListener('input', (e) => {
+      state.colorTolerance = parseInt(e.target.value, 10);
+      dom.tolValLabel.textContent = state.colorTolerance;
+    });
+
+    // 警戒設定輸入變更
+    dom.alertPhasesInput.addEventListener('input', () => {
+      state.alertConfigs = parseAlertConfigs(dom.alertPhasesInput.value);
+    });
+
+    // 音效時長選單變更
+    dom.soundDurationSelect.addEventListener('change', (e) => {
+      state.soundDuration = parseFloat(e.target.value);
+    });
+
+    // 預設選單切換
+    dom.bossPresetSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (BOSS_PRESETS[val]) {
+        dom.alertPhasesInput.value = BOSS_PRESETS[val].phases;
+        state.alertConfigs = parseAlertConfigs(dom.alertPhasesInput.value);
+        showToast(`已載入預設：${BOSS_PRESETS[val].name}`, 'info');
+      }
+    });
+
+    dom.btnApplyPreset.addEventListener('click', () => {
+      state.alertConfigs = parseAlertConfigs(dom.alertPhasesInput.value);
+      showToast('已成功套用警報配置！', 'success');
+    });
+
+    // 試聽按鈕（僅保留即將跌破）
+    dom.btnTestPreAlert.addEventListener('click', () => {
+      playBeep();
+      setAlertBanner('⚠️ [預警試聽] 即將跌破警戒線！準備應對', 'warn', 3500);
+      showToast('播放「即將跌破」預警提示音', 'info');
+    });
+
+    // 皮卡啾計時器按鈕事件
+    if (dom.btnPbPhase1) {
+      dom.btnPbPhase1.addEventListener('click', () => {
+        startPbTimer(40, 'phase1', '第一次反盾 (40秒)');
+      });
+    }
+    if (dom.btnPbPhase2) {
+      dom.btnPbPhase2.addEventListener('click', () => {
+        startPbTimer(15, 'phase2_end', '第二次反盾結束 (15秒)');
+      });
+    }
+    if (dom.btnPbReset) {
+      dom.btnPbReset.addEventListener('click', resetPbTimer);
+    }
+
+    // 監聽皮卡啾計時器「啟用/停用」開關
+    if (dom.chkEnablePbTimer) {
+      dom.chkEnablePbTimer.addEventListener('change', (e) => {
+        state.pbTimer.enabled = e.target.checked;
+        if (!state.pbTimer.enabled) {
+          resetPbTimer();
+          showToast('已關閉皮卡啾反盾計時器', 'info');
+        } else {
+          showToast('已啟用皮卡啾反盾計時器', 'success');
+        }
+        updatePbTimerDisplay();
+        renderToPipCanvas(state.currentHpPercent);
+      });
+    }
+
+    // 初始化啟動
+    state.alertConfigs = parseAlertConfigs(dom.alertPhasesInput.value);
+    updatePbTimerDisplay();
+    renderToPipCanvas(100.0);
+    setupPipStream();
+  </script>
+</body>
+</html>
