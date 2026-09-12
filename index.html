@@ -60,6 +60,12 @@
     </div>
     <!-- 快捷操作列 -->
     <div class="flex items-center gap-2">
+      <button id="btnScrollGuide" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5">
+        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        <span>📖 操作教學與指引</span>
+      </button>
       <button id="btnTogglePip" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -315,6 +321,131 @@
     </div>
   </main>
 
+  <!-- 新增：新手詳細操作指南與常見問題區塊 -->
+  <section id="userGuideSection" class="max-w-7xl w-full mx-auto px-4 pb-12 mt-2">
+    <div class="bg-surface border border-bordercol rounded-2xl p-6 shadow-md">
+      <div class="flex items-center justify-between border-b border-bordercol pb-4 mb-6">
+        <div class="flex items-center gap-2.5">
+          <span class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+          <div>
+            <h2 class="text-base font-bold text-white">使用說明與操作步驟指南</h2>
+            <p class="text-xs text-slate-400">零外掛注入、純影像視覺辨識，三分鐘快速上手教學</p>
+          </div>
+        </div>
+        <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
+          瀏覽器建議：Chrome
+        </span>
+      </div>
+
+      <!-- 步驟 1 ~ 4 圖文教學卡片網格 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        
+        <!-- 卡片 1 -->
+        <div class="bg-panel border border-bordercol rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow">1</span>
+              <h3 class="text-sm font-bold text-slate-200">連接遊戲畫面</h3>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              點擊左上方<b>「開始擷取遊戲畫面」</b>，在瀏覽器彈出的畫面共享選單中，切換到<b>「視窗 (Window)」</b>分頁，點選你的遊戲視窗即可。
+            </p>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-amber-400/90">
+            📌 提示：請避免選擇全螢幕，建議以「視窗化遊戲」連線最穩定。
+          </div>
+        </div>
+
+        <!-- 卡片 2 -->
+        <div class="bg-panel border border-bordercol rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow">2</span>
+              <h3 class="text-sm font-bold text-slate-200">滑鼠框選王血條</h3>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              連線後右側會即時顯示遊戲畫面。請用滑鼠<b>左鍵按住並拖曳</b>，畫出一個剛好框住整條王血條（從最左端到最右端）的藍色框。
+            </p>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-emerald-400/90">
+            🎯 預設顏色為 <b class="font-mono">#AB1000</b>，若有色差可點「點擊畫面吸色」點擊血條校正。
+          </div>
+        </div>
+
+        <!-- 卡片 3 -->
+        <div class="bg-panel border border-bordercol rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow">3</span>
+              <h3 class="text-sm font-bold text-slate-200">開啟置頂懸浮小窗</h3>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              點擊網頁右上角<b>「開啟置頂懸浮窗」</b>，桌面會跳出一個小黑框。它具備<b>系統級永遠置頂 (Always-on-Top)</b>，不會被遊戲遮擋。
+            </p>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-indigo-400/90">
+            ✨ 您可按住小視窗標題任意拖移到螢幕角落，打王視線不被遮蔽。
+          </div>
+        </div>
+
+        <!-- 卡片 4 -->
+        <div class="bg-panel border border-bordercol rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow">4</span>
+              <h3 class="text-sm font-bold text-slate-200">轉階預警與計時</h3>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              血量接近關鍵點（如阿卡 80% / 皮卡 90%）時，懸浮窗會常駐顯示<b>「⚠️ 即將跌破 XX%」</b>並播放提醒音。打皮卡啾可直接在小視窗上點擊 40s / 15s 計時！
+            </p>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-purple-400/90">
+            🛡️ 跌破門檻時提示詞會自動收回，無多餘噪音，專注打王！
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 常見問答 FAQ 區塊 -->
+      <div class="border-t border-bordercol pt-5">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <span>❓ 常見問題與疑難排解 (FAQ)</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="bg-panel p-3 rounded-lg border border-bordercol">
+            <h4 class="font-bold text-slate-200 mb-1">Q1：這個工具會不會有被遊戲判定為外掛或封號的風險？</h4>
+            <p class="text-slate-400 leading-relaxed">
+              <b>完全不會。</b> 本工具是純網頁程式，使用的是瀏覽器標準的「畫面錄製與螢幕像素比對」，完全不注入遊戲程式碼、不讀取遊戲記憶體、不發送任何封包，屬於 100% 安全的外部輔助工具。
+            </p>
+          </div>
+          <div class="bg-panel p-3 rounded-lg border border-bordercol">
+            <h4 class="font-bold text-slate-200 mb-1">Q2：為什麼血量數值一直顯示 100% 或 0% 沒有變化？</h4>
+            <p class="text-slate-400 leading-relaxed">
+              通常是「血條框選範圍過寬」或「血條顏色與預設有落差」。請點擊<b>「🎯 點擊畫面吸色」</b>並點一下血條最紅的區域，或者適度將<b>「顏色容許度」</b>稍微調大（例如調至 55~65）。
+            </p>
+          </div>
+          <div class="bg-panel p-3 rounded-lg border border-bordercol">
+            <h4 class="font-bold text-slate-200 mb-1">Q3：懸浮小視窗如何調整大小或關閉？</h4>
+            <p class="text-slate-400 leading-relaxed">
+              置頂小視窗右下角可像普通視窗一樣用滑鼠縮放邊緣。若不需要使用，只需點擊小視窗右上角的「✕」或再點一次網頁上的「開啟置頂懸浮窗」即可關閉。
+            </p>
+          </div>
+          <div class="bg-panel p-3 rounded-lg border border-bordercol">
+            <h4 class="font-bold text-slate-200 mb-1">Q4：我打別的王不需要皮卡啾計時器，可以關掉嗎？</h4>
+            <p class="text-slate-400 leading-relaxed">
+              可以！只要取消勾選步驟 4 的<b>「啟用計時器」</b>，主介面與置頂小視窗就會自動隱藏計時區塊，並自動縮窄懸浮窗高度，保持極簡清爽。
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- 隱藏後台處理元素 -->
   <video id="sourceVideo" class="absolute -top-[9999px] -left-[9999px] opacity-0 pointer-events-none w-1 h-1" playsinline muted autoplay></video>
   <canvas id="pipRenderCanvas" width="320" height="96" class="hidden"></canvas>
@@ -395,6 +526,8 @@
       btnPbPhase2: document.getElementById('btnPbPhase2'),
       btnPbReset: document.getElementById('btnPbReset'),
       toastContainer: document.getElementById('toastContainer'),
+      btnScrollGuide: document.getElementById('btnScrollGuide'),
+      userGuideSection: document.getElementById('userGuideSection'),
     };
 
     const ctx = dom.previewCanvas.getContext('2d');
@@ -1243,6 +1376,13 @@
     });
 
     dom.btnTogglePip.addEventListener('click', toggleFloatingOverlay);
+
+    // 平滑滾動至操作教學區塊
+    if (dom.btnScrollGuide && dom.userGuideSection) {
+      dom.btnScrollGuide.addEventListener('click', () => {
+        dom.userGuideSection.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
 
     // 吸管取色模式
     dom.btnEyedropper.addEventListener('click', () => {
